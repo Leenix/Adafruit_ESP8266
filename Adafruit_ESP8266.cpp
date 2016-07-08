@@ -250,12 +250,14 @@ boolean Adafruit_ESP8266::requestURL(Fstr *url) {
   return false;
 }
 
-// Requests page from currently-open TCP connection.  URL is
-// character string in SRAM.  Returns true if request issued successfully,
-// else false.  Calling function should then handle data returned, may
-// need to parse IPD delimiters (see notes in find() function.
-// (Can call find(F("Unlink"), true) to dump to debug.)
-boolean Adafruit_ESP8266::requestURL(char* url) {
+boolean Adafruit_ESP8266::requestURL(char* url, char* response_buffer, int response_buffer_size, char* date_buffer, int date_buffer_size) {
+    /**
+    * Requests page from currently-open TCP connection.  URL is
+    * character string in SRAM.  Returns true if request issued successfully,
+    * else false.  Calling function should then handle data returned, may
+    * need to parse IPD delimiters (see notes in find() function.
+    * (Can call find(F("Unlink"), true) to dump to debug.)
+    */
     print(F("AT+CIPSEND="));
     println(25 + strlen(url) + strlen_P((Pchr *)host));
     if(find(F("> "))) { // Wait for prompt
@@ -264,7 +266,18 @@ boolean Adafruit_ESP8266::requestURL(char* url) {
         print(F(" HTTP/1.1\r\nHost: ")); // 17
         print(host);
         print(F("\r\n\r\n")); // 4
-        return(find()); // Gets 'SEND OK' line
+        stream->flush();
+
+        // Grab the date string from the HTTP response if the user has passed in the buffer to hold it
+        if (date_buffer != NULL && find(F("Date: "))){
+            readLine(date_buffer, date_buffer_size);
+        }
+
+        if (response_buffer != NULL && find(F("\r\n\r\n"))){
+            readLine(response_buffer, response_buffer_size);
+        }
+
+        return find();
     }
     return false;
 }
